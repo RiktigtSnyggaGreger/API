@@ -20,36 +20,25 @@ switch ($action) {
             echo json_encode(['error' => 'Titel och content krävs']);
             exit;
         }
-
-        // Skicka in $db, $titel, $content, $lang:
         $newId = createPage($db, $titel, $content, $lang);
-
         echo json_encode(['success' => true, 'id' => $newId]);
         exit;
-
     case 'update':
         if (!$id) {
             http_response_code(400);
             echo json_encode(['error' => 'ID krävs för att uppdatera']);
             exit;
         }
-
-        // Skicka in $db, $id, $titel, $content:
         updatePage($db, $id, $titel, $content);
-
         echo json_encode(['success' => true, 'message' => "Sida $id har uppdaterats"]);
         exit;
-
     case 'delete':
         if (!$id) {
             http_response_code(400);
             echo json_encode(['error' => 'ID krävs för att radera']);
             exit;
         }
-
-        // Skicka in $db, $id:
         deletePage($db, $id);
-
         echo json_encode(['success' => true, 'message' => "Sida $id har raderats"]);
         exit;
 }
