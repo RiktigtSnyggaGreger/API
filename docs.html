@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>API-dokumentation</title>
+</head>
+<body>
+
+<h1>Så använder du API:et</h1>
+
+<p>Alla anrop görs till <code>https://api.ddev.site/api.php</code> med parametrar i URL:en. Svaret kommer alltid som JSON.</p>
+
+<h2>Hämta sidor</h2>
+
+<p>Alla sidor:</p>
+<pre>api.php</pre>
+
+<p>En sida via ID:</p>
+<pre>api.php?id=1</pre>
+
+<p>Första sidan med en viss tagg:</p>
+<pre>api.php?tag=nyheter</pre>
+
+<h2>Språk</h2>
+
+<p>Lägg till <code>lang</code> för att välja språk. Du kan välja <code>sv</code> (standard), <code>en</code> eller <code>de</code>.</p>
+<pre>api.php?id=1&amp;lang=en</pre>
+
+<h2>Skapa en sida</h2>
+
+<p>Kräver <code>titel</code> och <code>content</code>. Content måste vara giltig JSON.</p>
+<pre>api.php?action=create&amp;titel=Hej&amp;content={"text":{"sv":"Hej","en":"Hello","de":"Hallo"}}</pre>
+<p>Svar: <code>{"success": true, "id": 5}</code></p>
+<p>Lägg till <code>tag</code> för att välja tagg (namnet på taggen). Utan <code>tag</code>, eller med en tagg som inte finns, hamnar sidan under "Nyheter".</p>
+<pre>api.php?action=create&amp;titel=Hej&amp;tag=blogg&amp;content={"text":{"sv":"Hej"}}</pre>
+
+<h2>Uppdatera en sida</h2>
+
+<p>Kräver <code>id</code>. Skicka med <code>titel</code>, <code>content</code> och/eller <code>tag</code>.</p>
+<pre>api.php?action=update&amp;id=5&amp;titel=Ny titel</pre>
+<pre>api.php?action=update&amp;id=5&amp;tag=design</pre>
+
+<h2>Radera en sida</h2>
+
+<p>Kräver <code>id</code>.</p>
+<pre>api.php?action=delete&amp;id=5</pre>
+
+<h2>Fel</h2>
+
+<p>Om något går fel får du ett svar som <code>{"error": "Sidan hittades inte"}</code> tillsammans med en statuskod:</p>
+<ul>
+<li><b>400</b> – fel i anropet (t.ex. saknad parameter, ogiltig JSON, språk som inte stöds)</li>
+<li><b>404</b> – sidan hittades inte</li>
+</ul>
+
+</body>
+</html>

@@ -1,16 +1,21 @@
 <?php
 // funktioner.php
 
-function createPage($db, $titel, $content, $lang) {
-    $db->execute_query("INSERT INTO page (titel, tag_id, sprak) VALUES (?, 1, ?)", [$titel, $lang]);
+// Okänd eller ingen tagg = Nyheter (id 1)
+function createPage($db, $titel, $content, $lang, $tag) {
+    $db->execute_query("INSERT INTO page (titel, tag_id, sprak) VALUES (?, COALESCE((SELECT id FROM tag WHERE namn = ?), 1), ?)", [$titel, $tag, $lang]);
     $newId = $db->insert_id;
     $db->execute_query("INSERT INTO page_content (page_id, content_json) VALUES (?, ?)", [$newId, $content]);
     return $newId;
 }
 
-function updatePage($db, $id, $titel, $content) {
+function updatePage($db, $id, $titel, $content, $tag) {
     if ($titel) {
         $db->execute_query("UPDATE page SET titel = ? WHERE id = ?", [$titel, $id]);
+    }
+    if ($tag) {
+        // Okänd tagg = behåll den gamla
+        $db->execute_query("UPDATE page SET tag_id = COALESCE((SELECT id FROM tag WHERE namn = ?), tag_id) WHERE id = ?", [$tag, $id]);
     }
     if ($content) {
         $db->execute_query("UPDATE page_content SET content_json = ? WHERE page_id = ?", [$content, $id]);

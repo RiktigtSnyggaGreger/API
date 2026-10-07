@@ -40,7 +40,7 @@ switch ($action) {
         if (!json_validate($content)) {
             respond(['error' => 'Content måste vara giltig JSON'], 400);
         }
-        $newId = createPage($db, $titel, $content, $lang);
+        $newId = createPage($db, $titel, $content, $lang, $tag);
         respond(['success' => true, 'id' => $newId], 201);
     case 'update':
         if (!$id) {
@@ -49,7 +49,7 @@ switch ($action) {
         if ($content && !json_validate($content)) {
             respond(['error' => 'Content måste vara giltig JSON'], 400);
         }
-        updatePage($db, $id, $titel, $content);
+        updatePage($db, $id, $titel, $content, $tag);
         respond(['success' => true, 'message' => "Sida $id har uppdaterats"]);
     case 'delete':
         if (!$id) {
