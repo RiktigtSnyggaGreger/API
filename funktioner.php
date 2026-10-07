@@ -20,4 +20,6 @@ function updatePage($db, $id, $titel, $content) {
 function deletePage($db, $id) {
     $db->execute_query("DELETE FROM page_content WHERE page_id = ?", [$id]);
     $db->execute_query("DELETE FROM page WHERE id = ?", [$id]);
+    // true om en sida faktiskt raderades
+    return $db->affected_rows > 0;
 }

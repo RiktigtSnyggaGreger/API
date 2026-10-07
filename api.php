@@ -1,5 +1,19 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
+
+// Skickar ett JSON-svar och avslutar
+function respond($data, $status = 200) {
+    http_response_code($status);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    exit;
+}
+
+// Fångar alla fel (t.ex. databasfel) och svarar med JSON istället för en PHP-felsida
+set_exception_handler(function ($e) {
+    error_log($e); // hamnar i loggen (ddev logs), inte hos användaren
+    respond(['error' => 'Något gick fel på servern'], 500);
+});
+
 //koppla till databasen
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/funktioner.php';
@@ -12,35 +26,49 @@ $lang    = $_GET['lang'] ?? 'sv';
 $titel   = $_GET['titel'] ?? null;
 $content = $_GET['content'] ?? null;
 
+// Bara tillåtna språk, annars kan man skicka in egen SQL via lang
+if (!in_array($lang, ['sv', 'en', 'de'], true)) {
+    respond(['error' => 'Språket stöds inte'], 400);
+}
+
+// ID måste vara ett heltal
+if ($id !== null && !ctype_digit($id)) {
+    respond(['error' => 'ID måste vara ett nummer'], 400);
+}
+
+
 // Timo sa att switch va bra, så nu har jag switch
 switch ($action) {
     case 'create':
         if (!$titel || !$content) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Titel och content krävs']);
-            exit;
+            respond(['error' => 'Titel och content krävs'], 400);
+        }
+        if (!json_validate($content)) {
+            respond(['error' => 'Content måste vara giltig JSON'], 400);
         }
         $newId = createPage($db, $titel, $content, $lang);
-        echo json_encode(['success' => true, 'id' => $newId]);
-        exit;
+        respond(['success' => true, 'id' => $newId], 201);
     case 'update':
         if (!$id) {
-            http_response_code(400);
-            echo json_encode(['error' => 'ID krävs för att uppdatera']);
-            exit;
+            respond(['error' => 'ID krävs för att uppdatera'], 400);
+        }
+        if ($content && !json_validate($content)) {
+            respond(['error' => 'Content måste vara giltig JSON'], 400);
         }
         updatePage($db, $id, $titel, $content);
-        echo json_encode(['success' => true, 'message' => "Sida $id har uppdaterats"]);
-        exit;
+        respond(['success' => true, 'message' => "Sida $id har uppdaterats"]);
     case 'delete':
         if (!$id) {
-            http_response_code(400);
-            echo json_encode(['error' => 'ID krävs för att radera']);
-            exit;
+            respond(['error' => 'ID krävs för att radera'], 400);
         }
-        deletePage($db, $id);
-        echo json_encode(['success' => true, 'message' => "Sida $id har raderats"]);
-        exit;
+        if (!deletePage($db, $id)) {
+            respond(['error' => 'Sidan hittades inte'], 404);
+        }
+        respond(['success' => true, 'message' => "Sida $id har raderats"]);
+    case null:
+        break; // ingen action = hämta sidor nedan
+    default:
+        respond(['error' => 'Okänd action'], 400);
 }
 
 
@@ -93,10 +121,7 @@ if ($id) {
 
 // Felhantering
 if (!$data) {
-    http_response_code(404);
-    echo json_encode(['error' => 'Sidan hittades inte']);
-    exit;
+    respond(['error' => 'Sidan hittades inte'], 404);
 }
 
-// JSON_UNESCAPED_UNICODE = tillåter Å,Ä och Ö
-echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+respond($data);
