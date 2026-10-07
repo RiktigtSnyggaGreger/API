@@ -8,12 +8,6 @@ function respond($data, $status = 200) {
     exit;
 }
 
-// Fångar alla fel (t.ex. databasfel) och svarar med JSON istället för en PHP-felsida
-set_exception_handler(function ($e) {
-    error_log($e); // hamnar i loggen (ddev logs), inte hos användaren
-    respond(['error' => 'Något gick fel på servern'], 500);
-});
-
 //koppla till databasen
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/funktioner.php';
