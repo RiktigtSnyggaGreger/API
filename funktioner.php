@@ -23,3 +23,22 @@ function deletePage($db, $id) {
     // true om en sida faktiskt raderades
     return $db->affected_rows > 0;
 }
+
+// Byter ut alla {"sv": ..., "en": ..., "de": ...} mot texten på valt språk, även i listor
+function translate($value, $lang) {
+    if (!is_array($value)) {
+        return $value;
+    }
+    $arLangObjekt = $value && !array_is_list($value) && !array_diff(array_keys($value), ['sv', 'en', 'de']);
+    if ($arLangObjekt) {
+        return $value[$lang] ?? null;
+    }
+    return array_map(fn($v) => translate($v, $lang), $value);
+}
+
+// Lägger sidans JSON-innehåll (på valt språk) bredvid id, titel och tag
+function formatPage($row, $lang) {
+    $content = json_decode($row['content_json'] ?? '', true) ?? [];
+    unset($row['content_json']);
+    return $row + translate($content, $lang);
+}

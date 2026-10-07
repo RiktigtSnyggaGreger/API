@@ -248,7 +248,7 @@ Om både `id` och `tag` skickas med används `id`.
 | `rubrik.sv` / `rubrik.en` / `rubrik.de` | text | Rubriken på respektive språk |
 | `hero_bild` | text | Sökväg eller URL till hero-bilden |
 
-Du kan lägga till fler fält. De sparas, men visas inte i svaren.
+Du kan lägga till fler fält, till exempel `ingress` eller `brodtext`. Alla fält visas i svaren, och varje objekt med `sv`/`en`/`de` byts ut mot texten på valt språk (även inne i listor).
 
 ## Felkoder
 

@@ -68,6 +68,7 @@ switch ($action) {
 
 
 // Hämtar sidan, taggen och JSON-innehållet på samma gång
+// formatPage() packar upp JSON:en och väljer rätt språk
 // I LOVE MARIADB!! <3
 if ($id) {
     // 1. Hämta sida via ID
@@ -75,22 +76,21 @@ if ($id) {
                 p.id, 
                 p.titel, 
                 t.namn AS tag, 
-                JSON_VALUE(pc.content_json, '$.rubrik.$lang') AS rubrik,
-                JSON_VALUE(pc.content_json, '$.hero_bild') AS hero_bild
+                pc.content_json
             FROM page p
             LEFT JOIN tag t ON p.tag_id = t.id
             LEFT JOIN page_content pc ON p.id = pc.page_id
             WHERE p.id = ?";
 
     $data = $db->execute_query($sql, [$id])->fetch_assoc();
+    $data = $data ? formatPage($data, $lang) : null;
 } elseif ($tag) {
     // 2. Hämta FÖRSTA sidan som har denna tagg direkt
     $sql = "SELECT 
                 p.id, 
                 p.titel, 
                 t.namn AS tag, 
-                JSON_VALUE(pc.content_json, '$.rubrik.$lang') AS rubrik,
-                JSON_VALUE(pc.content_json, '$.hero_bild') AS hero_bild
+                pc.content_json
             FROM page p
             INNER JOIN tag t ON p.tag_id = t.id
             LEFT JOIN page_content pc ON p.id = pc.page_id
@@ -98,19 +98,20 @@ if ($id) {
 
     // fetch_assoc() ger ett platt enskilt objekt direkt
     $data = $db->execute_query($sql, [$tag])->fetch_assoc();
+    $data = $data ? formatPage($data, $lang) : null;
 } else {
     // 3. Hämta alla sidor som en lista
     $sql = "SELECT 
                 p.id, 
                 p.titel, 
                 t.namn AS tag, 
-                JSON_VALUE(pc.content_json, '$.rubrik.$lang') AS rubrik,
-                JSON_VALUE(pc.content_json, '$.hero_bild') AS hero_bild
+                pc.content_json
             FROM page p
             LEFT JOIN tag t ON p.tag_id = t.id
             LEFT JOIN page_content pc ON p.id = pc.page_id";
 
     $data = $db->execute_query($sql)->fetch_all(MYSQLI_ASSOC);
+    $data = array_map(fn($row) => formatPage($row, $lang), $data);
 }
 
 // Felhantering
