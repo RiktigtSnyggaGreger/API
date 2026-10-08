@@ -21,6 +21,13 @@
 <p>Första sidan med en viss tagg:</p>
 <pre>api.php?tag=nyheter</pre>
 
+<h2>Sök efter ett ord</h2>
+
+<p>Lägg till <code>contentSearch</code> för att få alla sidor där ordet finns med i titeln eller innehållet. Sökningen görs på valt språk och bryr sig inte om stora eller små bokstäver.</p>
+<pre>api.php?contentSearch=docker</pre>
+<pre>api.php?contentSearch=guide&amp;lang=en</pre>
+<p>Hittas ordet inte på någon sida får du 404.</p>
+
 <h2>Språk</h2>
 
 <p>Lägg till <code>lang</code> för att välja språk. Du kan välja <code>sv</code> (standard), <code>en</code> eller <code>de</code>.</p>
@@ -39,6 +46,9 @@
 <p>Kräver <code>id</code>. Skicka med <code>titel</code>, <code>content</code> och/eller <code>tag</code>.</p>
 <pre>api.php?action=update&amp;id=5&amp;titel=Ny titel</pre>
 <pre>api.php?action=update&amp;id=5&amp;tag=design</pre>
+<pre>api.php?action=update&amp;id=5&amp;content={"text":{"sv":"Hej igen","en":"Hello again","de":"Hallo wieder"}}</pre>
+<p>Obs: <code>content</code> ersätter hela innehållet. Fält du inte skickar med försvinner.</p>
+<p>ID sätts automatiskt av databasen när en sida skapas och kan inte väljas själv.</p>
 
 <h2>Radera en sida</h2>
 

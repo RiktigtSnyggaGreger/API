@@ -1,35 +1,17 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-
-// Skickar ett JSON-svar och avslutar
-function respond($data, $status = 200) {
-    http_response_code($status);
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-    exit;
-}
-
-//koppla till databasen
+//Kopplar!
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/funktioner.php';
 
-// Kollar ifall man skickar med ett ID
+// Variablar!! me GET!
 $action  = $_GET['action'] ?? null;
 $id      = $_GET['id'] ?? null;
 $tag     = $_GET['tag'] ?? null;
 $lang    = $_GET['lang'] ?? 'sv';
 $titel   = $_GET['titel'] ?? null;
 $content = $_GET['content'] ?? null;
-
-// Bara tillåtna språk, annars kan man skicka in egen SQL via lang
-if (!in_array($lang, ['sv', 'en', 'de'], true)) {
-    respond(['error' => 'Språket stöds inte'], 400);
-}
-
-// ID måste vara ett heltal
-if ($id !== null && !ctype_digit($id)) {
-    respond(['error' => 'ID måste vara ett nummer'], 400);
-}
-
+$contentSearch = $_GET['contentSearch'] ?? null;
 
 // Timo sa att switch va bra, så nu har jag switch
 switch ($action) {
@@ -64,9 +46,6 @@ switch ($action) {
     default:
         respond(['error' => 'Okänd action'], 400);
 }
-
-
-
 // Hämtar sidan, taggen och JSON-innehållet på samma gång
 // formatPage() packar upp JSON:en och väljer rätt språk
 // I LOVE MARIADB!! <3
@@ -83,9 +62,11 @@ if ($id) {
             WHERE p.id = ?";
 
     $data = $db->execute_query($sql, [$id])->fetch_assoc();
-    $data = $data ? formatPage($data, $lang) : null;
+    if ($data) {
+        $data = formatPage($data, $lang);
+    }
 } elseif ($tag) {
-    // 2. Hämta FÖRSTA sidan som har denna tagg direkt
+    // 2. Hämta ALLA sidor som har denna tagg
     $sql = "SELECT 
                 p.id, 
                 p.titel, 
@@ -96,11 +77,34 @@ if ($id) {
             LEFT JOIN page_content pc ON p.id = pc.page_id
             WHERE t.namn = ?";
 
-    // fetch_assoc() ger ett platt enskilt objekt direkt
-    $data = $db->execute_query($sql, [$tag])->fetch_assoc();
-    $data = $data ? formatPage($data, $lang) : null;
+    $rader = $db->execute_query($sql, [$tag])->fetch_all(MYSQLI_ASSOC);
+    $data = [];
+    foreach ($rader as $rad) {
+        $data[] = formatPage($rad, $lang);
+    }
+} elseif ($contentSearch) {
+    // 3. Hämta alla sidor där ordet finns med (på valt språk)
+    $sql = "SELECT
+                p.id,
+                p.titel,
+                t.namn AS tag,
+                pc.content_json
+            FROM page p
+            LEFT JOIN tag t ON p.tag_id = t.id
+            LEFT JOIN page_content pc ON p.id = pc.page_id";
+
+    $rader = $db->execute_query($sql)->fetch_all(MYSQLI_ASSOC);
+
+    // Spara bara sidorna där ordet finns
+    $data = [];
+    foreach ($rader as $rad) {
+        $page = formatPage($rad, $lang);
+        if (pageContains($page, $contentSearch)) {
+            $data[] = $page;
+        }
+    }
 } else {
-    // 3. Hämta alla sidor som en lista
+    // 4. Hämta alla sidor som en lista
     $sql = "SELECT 
                 p.id, 
                 p.titel, 
@@ -110,13 +114,27 @@ if ($id) {
             LEFT JOIN tag t ON p.tag_id = t.id
             LEFT JOIN page_content pc ON p.id = pc.page_id";
 
-    $data = $db->execute_query($sql)->fetch_all(MYSQLI_ASSOC);
-    $data = array_map(fn($row) => formatPage($row, $lang), $data);
+    $rader = $db->execute_query($sql)->fetch_all(MYSQLI_ASSOC);
+    $data = [];
+    foreach ($rader as $rad) {
+        $data[] = formatPage($rad, $lang);
+    }
 }
-
 // Felhantering
 if (!$data) {
     respond(['error' => 'Sidan hittades inte'], 404);
 }
+
+// Bara tillåtna språk
+if (!in_array($lang, ['sv', 'en', 'de'], true)) {
+    respond(['error' => 'Språket stöds inte'], 400);
+}
+
+// ID måste vara ett heltal, ctype_digit kollar ifall de e nummer.
+if ($id !== null && !ctype_digit($id)) {
+    respond(['error' => 'ID måste vara ett nummer'], 400);
+}
+
+
 
 respond($data);

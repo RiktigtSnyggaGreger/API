@@ -1,9 +1,13 @@
 <?php
-// funktioner.php
-
-// Okänd eller ingen tagg = Nyheter (id 1)
 function createPage($db, $titel, $content, $lang, $tag) {
-    $db->execute_query("INSERT INTO page (titel, tag_id, sprak) VALUES (?, COALESCE((SELECT id FROM tag WHERE namn = ?), 1), ?)", [$titel, $tag, $lang]);
+    $tagId = 1;
+    if ($tag) {
+        $rad = $db->execute_query("SELECT id FROM tag WHERE namn = ?", [$tag])->fetch_assoc();
+        if ($rad) {
+            $tagId = $rad['id'];
+        }
+    }
+    $db->execute_query("INSERT INTO page (titel, tag_id, sprak) VALUES (?, ?, ?)", [$titel, $tagId, $lang]);
     $newId = $db->insert_id;
     $db->execute_query("INSERT INTO page_content (page_id, content_json) VALUES (?, ?)", [$newId, $content]);
     return $newId;
@@ -15,7 +19,10 @@ function updatePage($db, $id, $titel, $content, $tag) {
     }
     if ($tag) {
         // Okänd tagg = behåll den gamla
-        $db->execute_query("UPDATE page SET tag_id = COALESCE((SELECT id FROM tag WHERE namn = ?), tag_id) WHERE id = ?", [$tag, $id]);
+        $rad = $db->execute_query("SELECT id FROM tag WHERE namn = ?", [$tag])->fetch_assoc();
+        if ($rad) {
+            $db->execute_query("UPDATE page SET tag_id = ? WHERE id = ?", [$rad['id'], $id]);
+        }
     }
     if ($content) {
         $db->execute_query("UPDATE page_content SET content_json = ? WHERE page_id = ?", [$content, $id]);
@@ -34,16 +41,61 @@ function translate($value, $lang) {
     if (!is_array($value)) {
         return $value;
     }
-    $arLangObjekt = $value && !array_is_list($value) && !array_diff(array_keys($value), ['sv', 'en', 'de']);
-    if ($arLangObjekt) {
-        return $value[$lang] ?? null;
+    // Det är ett språkobjekt om den inte är tom och alla nycklar är sv, en eller de
+    $arLangObjekt = count($value) > 0;
+    foreach ($value as $nyckel => $v) {
+        if ($nyckel !== 'sv' && $nyckel !== 'en' && $nyckel !== 'de') {
+            $arLangObjekt = false;
+        }
     }
-    return array_map(fn($v) => translate($v, $lang), $value);
+    if ($arLangObjekt) {
+        if (isset($value[$lang])) {
+            return $value[$lang];
+        }
+        return null;
+    }
+    // Annars: översätt allt som ligger inuti
+    $resultat = [];
+    foreach ($value as $nyckel => $v) {
+        $resultat[$nyckel] = translate($v, $lang);
+    }
+    return $resultat;
 }
 
 // Lägger sidans JSON-innehåll (på valt språk) bredvid id, titel och tag
 function formatPage($row, $lang) {
-    $content = json_decode($row['content_json'] ?? '', true) ?? [];
+    $content = [];
+    if ($row['content_json']) {
+        $content = json_decode($row['content_json'], true);
+    }
     unset($row['content_json']);
-    return $row + translate($content, $lang);
+
+    $content = translate($content, $lang);
+    foreach ($content as $nyckel => $v) {
+        // id, titel och tag från databasen ska inte skrivas över
+        if (!array_key_exists($nyckel, $row)) {
+            $row[$nyckel] = $v;
+        }
+    }
+    return $row;
+}
+
+// Lite gemini :( de va för svårt för lilla Edwin och tänka ut själv
+function pageContains($page, $ord) {
+    foreach ($page as $varde) {
+        // Om värdet är en lista eller ett objekt: leta inuti det också
+        if (is_array($varde) && pageContains($varde, $ord)) {
+            return true;
+        }
+        if (is_string($varde) && mb_stripos($varde, $ord) !== false) {
+            return true;
+        }
+    }
+    return false;
+}
+// Skickar ett JSON-svar och avslutar
+function respond($data, $status = 200) {
+    http_response_code($status);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    exit;
 }
